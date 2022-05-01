@@ -73,26 +73,45 @@ function App() {
     [outputCanvasRef]
   );
 
-
   const [colors, setStateColors] = React.useState<[number, number, number]>([
     3, 2, 3,
   ]);
 
   const setColors = React.useCallback((colors: [number, number, number]) => {
     const sum = colors.reduce((curr, prev) => curr + prev, 0);
-    if(sum > 0) {
+    if (sum > 0) {
       setStateColors(colors);
     }
-  }, [])
+  }, []);
 
   const handleDataInputChange = React.useCallback(async (evt: any) => {
     const data = await encodeFileAsURL(evt.target);
-    console.log({data})
+    console.log({ data });
     setData(data);
   }, []);
 
+  const colorSum = React.useMemo(
+    () => colors.reduce((prev, curr) => prev + curr, 0),
+    [colors]
+  );
+
+  const spaceUsed = React.useMemo(
+    () => data.length / (colorSum / 8),
+    [data, colorSum]
+  );
+
+  const progressValue = React.useMemo(
+    () => (availableSize > 0 ? spaceUsed / availableSize : 0),
+    [availableSize, spaceUsed]
+  );
+
   const encodeImage = React.useCallback(async () => {
     if (!sourceCanvasRef.current || !outputCanvasRef.current) return;
+
+    if (spaceUsed > availableSize) {
+      alert('Niewystarczająca ilość wymaganego miejsca do zakodowania danych!');
+      return;
+    }
 
     encryptImage(
       sourceCanvasRef.current,
@@ -100,7 +119,7 @@ function App() {
       colors,
       outputCanvasRef.current
     );
-  }, [colors, data]);
+  }, [colors, data, spaceUsed, availableSize]);
 
   const decodeImage = React.useCallback(() => {
     if (!outputCanvasRef.current) return;
@@ -110,15 +129,6 @@ function App() {
       downloadFile(data);
     }
   }, [outputCanvasRef, colors]);
-
-  const colorSum = React.useMemo(
-    () => colors.reduce((prev, curr) => prev + curr, 0),
-    [colors]
-  );
-
-  const spaceUsed = React.useMemo(() => data.length / (colorSum / 8), [data, colorSum]);
-
-  const progressValue = React.useMemo(() => availableSize > 0 ? (spaceUsed / availableSize) : 0, [availableSize, spaceUsed]);
 
   return (
     <div className="App">
@@ -181,17 +191,29 @@ function App() {
         </div>
         <div className="availableSize">
           <span>
-            Pojemność nośnika: <strong>{availableSize} B | {(availableSize / 112500).toFixed(2)} MB</strong>
+            Pojemność nośnika:{" "}
+            <strong>
+              {availableSize} B | {(availableSize / 112500).toFixed(2)} MB
+            </strong>
           </span>
           <span>
-            Rozmiar danych wejściowych: <strong>{spaceUsed.toFixed(0)} B | {(spaceUsed / 112500).toFixed(2)} MB</strong>
+            Rozmiar danych wejściowych:{" "}
+            <strong>
+              {spaceUsed.toFixed(0)} B | {(spaceUsed / 112500).toFixed(2)} MB
+            </strong>
           </span>
           <span>
-            Pozostała pojemność: <strong>{(availableSize - spaceUsed).toFixed(0)} B | {((availableSize - spaceUsed) / 112500).toFixed(2)} MB</strong>
+            Pozostała pojemność:{" "}
+            <strong>
+              {(availableSize - spaceUsed).toFixed(0)} B |{" "}
+              {((availableSize - spaceUsed) / 112500).toFixed(2)} MB
+            </strong>
           </span>
           <span className="d-flex align-items-center">
             <progress value={progressValue} />
-            <strong className='mx-2'>{(progressValue * 100).toFixed(1)}%</strong>
+            <strong className="mx-2">
+              {(progressValue * 100).toFixed(1)}%
+            </strong>
           </span>
         </div>
         <div className="buttons">
